@@ -1,0 +1,99 @@
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Configuration files with sensitive data
+src/config.js
+config.js
+config.local.js
+
+# API Keys and secrets
+*.key
+*.pem
+*.token
+*.secret
+apify-config.json
+
+# Auth0 configuration
+auth0-config.json
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+.nyc_output
+coverage/
+*.lcov
+
+# node_modules (if Node.js is added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional npm cache directory
+.npm
+
+# User data and matches
+user-data/
+matches/
+data/local/
+
+# Build outputs
+dist/
+build/
+*.tgz
+
+# Temporary files
+*.tmp
+*.temp
+.cache/ 

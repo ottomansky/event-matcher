@@ -1,4 +1,5 @@
 // Configuration settings for the Event Matcher app
+// Copy this file to config.js and update with your actual values
 export const config = {
     // Auth0 Configuration
     auth0: {
@@ -10,9 +11,9 @@ export const config = {
     
     // Apify Configuration
     apify: {
-        apiToken: 'apify_api_ZgAZ7Fu5BHJM4dlBZdXwCa7MEKrsGB2yyi4y',
-        runId: 'WxgKyLhVQ4Y3qAr0D', // Specific run ID
-        actorId: 'lexis-solutions/lu-ma-scraper', // Actor ID if needed for future runs
+        apiToken: 'YOUR_APIFY_API_TOKEN', // Get from your Apify account settings
+        runId: 'YOUR_RUN_ID', // Specific run ID
+        actorId: 'YOUR_ACTOR_ID', // Actor ID for latest runs
         baseUrl: 'https://api.apify.com/v2',
         useLocalFallback: true // Fallback to local JSON if API fails
     },
