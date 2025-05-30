@@ -12,8 +12,8 @@ export const config = {
     // Apify Configuration
     apify: {
         apiToken: 'YOUR_APIFY_API_TOKEN', // Get from your Apify account settings
-        runId: 'WxgKyLhVQ4Y3qAr0D', // Specific run ID
-        actorId: 'lexis-solutions/lu-ma-scraper', // Actor ID for latest runs
+        runId: 'YOUR_RUN_ID', // Specific run ID
+        actorId: 'YOUR_ACTOR_ID', // Actor ID for latest runs
         baseUrl: 'https://api.apify.com/v2',
         useLocalFallback: true // Fallback to local JSON if API fails
     },
