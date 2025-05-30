@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth0 Debug - Event Matcher</title>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; border-left: 4px solid #ff0000; }
+        .success { background: #e6ffe6; border-left: 4px solid #00ff00; }
+        .info { background: #e6f3ff; border-left: 4px solid #0066cc; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-secondary { background: #666; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Auth0 GenAI Debug Console</h1>
+    
+    <div class="controls">
+        <button id="init-auth0" class="btn-primary">Initialize Auth0</button>
+        <button id="init-genai" class="btn-primary">Initialize GenAI</button>
+        <button id="login-popup" class="btn-secondary" disabled>Login with Popup</button>
+        <button id="login-redirect" class="btn-secondary" disabled>Login with Redirect</button>
+        <button id="check-auth" class="btn-secondary">Check Authentication</button>
+        <button id="clear-logs" class="btn-secondary">Clear Logs</button>
+    </div>
+    
+    <div id="logs"></div>
+
+    <script type="module">
+        // Configuration
+        const config = {
+            domain: 'genai-6416075258581035.auth0.com',
+            clientId: 'KYvUBfLVEAQgKr2ayp9rGJk5LayklDGF',
+            redirectUri: window.location.origin + '/public/debug.html',
+            audience: ''
+        };
+
+        let auth0Client = null;
+        let auth0GenAIClient = null;
+        
+        // Logging
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Initialize standard Auth0
+        async function initStandardAuth0() {
+            try {
+                log('🔐 Initializing standard Auth0...', 'info');
+                
+                auth0Client = await window.auth0.createAuth0Client({
+                    domain: config.domain,
+                    clientId: config.clientId,
+                    authorizationParams: {
+                        redirect_uri: config.redirectUri,
+                        audience: config.audience || undefined,
+                        scope: 'openid profile email'
+                    },
+                    cacheLocation: 'localstorage',
+                    useRefreshTokens: true
+                });
+                
+                log('✅ Standard Auth0 initialized successfully', 'success');
+                document.getElementById('login-popup').disabled = false;
+                document.getElementById('login-redirect').disabled = false;
+                
+                // Check if already authenticated
+                const isAuthenticated = await auth0Client.isAuthenticated();
+                if (isAuthenticated) {
+                    const user = await auth0Client.getUser();
+                    log(`👤 Already authenticated: ${user.name || user.email}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Standard Auth0 initialization failed: ${error.message}`, 'error');
+                log(`🔍 Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+            }
+        }
+
+        // Initialize Auth0 GenAI
+        async function initGenAIAuth0() {
+            try {
+                log('🤖 Initializing Auth0 for GenAI...', 'info');
+                
+                auth0GenAIClient = await window.auth0.createAuth0Client({
+                    domain: config.domain,
+                    clientId: config.clientId,
+                    authorizationParams: {
+                        redirect_uri: config.redirectUri,
+                        audience: config.audience || `https://${config.domain}/api/v2/`,
+                        scope: 'openid profile email offline_access read:current_user update:current_user_metadata'
+                    },
+                    cacheLocation: 'memory',
+                    useRefreshTokens: true,
+                    useRefreshTokensFallback: true,
+                    leeway: 60
+                });
+                
+                log('✅ Auth0 GenAI initialized successfully', 'success');
+                
+                // Test GenAI capabilities
+                try {
+                    await auth0GenAIClient.getTokenSilently({
+                        authorizationParams: {
+                            audience: config.audience || `https://${config.domain}/api/v2/`,
+                        }
+                    });
+                    log('🧪 GenAI capabilities test passed', 'success');
+                } catch (error) {
+                    if (error.error === 'login_required' || error.error === 'consent_required') {
+                        log('🧪 GenAI capabilities available (login required)', 'info');
+                    } else {
+                        log(`⚠️ GenAI test failed: ${error.error || error.message}`, 'error');
+                        log('💡 This may indicate GenAI features are not available for this tenant', 'info');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Auth0 GenAI initialization failed: ${error.message}`, 'error');
+                log(`🔍 Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+                
+                if (error.message?.includes('Unauthorized')) {
+                    log('🔒 GenAI features require enrollment in Developer Preview program', 'error');
+                    log('📋 Visit https://auth0.com/ai/docs to join the program', 'info');
+                }
+            }
+        }
+
+        // Login with popup
+        async function loginWithPopup() {
+            const client = auth0GenAIClient || auth0Client;
+            if (!client) {
+                log('❌ No Auth0 client available. Initialize first.', 'error');
+                return;
+            }
+            
+            try {
+                log('🔐 Starting login with popup...', 'info');
+                
+                await client.loginWithPopup({
+                    authorizationParams: {
+                        scope: 'openid profile email'
+                    }
+                });
+                
+                log('✅ Login successful!', 'success');
+                
+                const user = await client.getUser();
+                log(`👤 Logged in as: ${user.name || user.email}`, 'success');
+                log(`📧 Email: ${user.email}`, 'info');
+                log(`🖼️ Avatar: ${user.picture}`, 'info');
+                
+            } catch (error) {
+                log(`❌ Login failed: ${error.message}`, 'error');
+                log(`🔍 Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+            }
+        }
+
+        // Login with redirect
+        async function loginWithRedirect() {
+            const client = auth0GenAIClient || auth0Client;
+            if (!client) {
+                log('❌ No Auth0 client available. Initialize first.', 'error');
+                return;
+            }
+            
+            try {
+                log('🔐 Starting login with redirect...', 'info');
+                
+                await client.loginWithRedirect({
+                    appState: { returnTo: window.location.pathname }
+                });
+                
+            } catch (error) {
+                log(`❌ Redirect login failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Check authentication status
+        async function checkAuthentication() {
+            const client = auth0GenAIClient || auth0Client;
+            if (!client) {
+                log('❌ No Auth0 client available. Initialize first.', 'error');
+                return;
+            }
+            
+            try {
+                const isAuthenticated = await client.isAuthenticated();
+                log(`🔍 Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`, 'info');
+                
+                if (isAuthenticated) {
+                    const user = await client.getUser();
+                    log(`👤 Current user: ${user.name || user.email}`, 'info');
+                    
+                    try {
+                        const token = await client.getTokenSilently();
+                        log('🎟️ Token retrieved successfully', 'success');
+                    } catch (tokenError) {
+                        log(`⚠️ Token retrieval failed: ${tokenError.message}`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Authentication check failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Clear logs
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Event listeners
+        document.getElementById('init-auth0').addEventListener('click', initStandardAuth0);
+        document.getElementById('init-genai').addEventListener('click', initGenAIAuth0);
+        document.getElementById('login-popup').addEventListener('click', loginWithPopup);
+        document.getElementById('login-redirect').addEventListener('click', loginWithRedirect);
+        document.getElementById('check-auth').addEventListener('click', checkAuthentication);
+        document.getElementById('clear-logs').addEventListener('click', clearLogs);
+
+        // Handle redirect callback
+        if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
+            log('🔄 Handling redirect callback...', 'info');
+            initStandardAuth0().then(() => {
+                if (auth0Client) {
+                    auth0Client.handleRedirectCallback().then(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        log('✅ Redirect callback handled successfully', 'success');
+                        checkAuthentication();
+                    }).catch(error => {
+                        log(`❌ Redirect callback failed: ${error.message}`, 'error');
+                    });
+                }
+            });
+        }
+
+        // Initial log
+        log('🚀 Auth0 Debug Console loaded', 'info');
+        log(`🌐 Domain: ${config.domain}`, 'info');
+        log(`🆔 Client ID: ${config.clientId}`, 'info');
+        log(`🔗 Redirect URI: ${config.redirectUri}`, 'info');
+        log('💡 Click "Initialize Auth0" or "Initialize GenAI" to start testing', 'info');
+    </script>
+</body>
+</html> 

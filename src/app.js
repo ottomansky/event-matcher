@@ -58,31 +58,44 @@ const app = {
     
     // Check authentication status
     async checkAuth() {
-        // Try Auth0 GenAI first
-        const auth0GenAIInitialized = await auth0GenAI.init();
-        if (auth0GenAIInitialized) {
-            const user = await auth0GenAI.getEnhancedUser();
-            if (user) {
-                this.currentUser = user;
-                this.useAuth0GenAI = true;
-                this.showHomePage();
-                
-                // Initialize AI recommendations if enabled
-                if (user.aiPreferences?.allowAIRecommendations) {
-                    await aiRecommendations.init();
-                }
-                return;
-            }
-        }
-        
-        // Fallback to regular Auth0
+        // For now, prioritize standard Auth0 for basic authentication
+        // Try regular Auth0 first (simpler setup)
         const auth0Initialized = await auth0.init();
         if (auth0Initialized) {
             const user = await auth0.getUser();
             if (user) {
                 this.currentUser = user;
                 this.showHomePage();
+                console.log('✅ Using standard Auth0 authentication');
                 return;
+            }
+        }
+        
+        // Only try Auth0 GenAI if explicitly configured and standard Auth0 fails
+        const isGenAIExplicitlyConfigured = config.auth0.domain.includes('genai') && 
+                                           config.auth0.audience && 
+                                           config.auth0.audience.length > 0;
+        
+        if (isGenAIExplicitlyConfigured) {
+            try {
+                console.log('🤖 Attempting Auth0 GenAI as fallback...');
+                const auth0GenAIInitialized = await auth0GenAI.init();
+                if (auth0GenAIInitialized) {
+                    const user = await auth0GenAI.getEnhancedUser();
+                    if (user) {
+                        this.currentUser = user;
+                        this.useAuth0GenAI = true;
+                        this.showHomePage();
+                        
+                        // Initialize AI recommendations if enabled
+                        if (user.aiPreferences?.allowAIRecommendations) {
+                            await aiRecommendations.init();
+                        }
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log('⚠️ Auth0 GenAI not available, continuing with standard Auth0');
             }
         }
         

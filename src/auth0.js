@@ -16,27 +16,37 @@ export const auth0 = {
                 return false;
             }
             
-            console.log('🔐 Initializing Auth0 with domain:', config.auth0.domain);
+            console.log('🔐 Initializing standard Auth0 with domain:', config.auth0.domain);
             
-            this.client = await window.auth0.createAuth0Client({
+            // Prepare Auth0 configuration
+            const auth0Config = {
                 domain: config.auth0.domain,
                 clientId: config.auth0.clientId,
                 authorizationParams: {
                     redirect_uri: config.auth0.redirectUri,
-                    audience: config.auth0.audience || undefined,
                     scope: 'openid profile email'
                 },
                 cacheLocation: 'localstorage',
                 useRefreshTokens: true
-            });
+            };
+            
+            // Only add audience if it's defined and not empty
+            if (config.auth0.audience && config.auth0.audience.trim() !== '') {
+                auth0Config.authorizationParams.audience = config.auth0.audience;
+                console.log('🎯 Using Auth0 audience:', config.auth0.audience);
+            } else {
+                console.log('ℹ️ Using basic Auth0 authentication (no audience)');
+            }
+            
+            this.client = await window.auth0.createAuth0Client(auth0Config);
             
             this.isInitialized = true;
-            console.log('✅ Auth0 client initialized successfully');
+            console.log('✅ Standard Auth0 client initialized successfully');
             
             // Check if already authenticated on page load
             const isAuthenticated = await this.client.isAuthenticated();
             if (isAuthenticated) {
-                console.log('👤 User already authenticated');
+                console.log('👤 User already authenticated with standard Auth0');
                 const user = await this.getUser();
                 if (user) {
                     window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
@@ -46,13 +56,27 @@ export const auth0 = {
             // Handle redirect callback
             if (window.location.search.includes('code=') || 
                 window.location.search.includes('error=')) {
-                console.log('🔄 Handling Auth0 redirect callback...');
+                console.log('🔄 Handling standard Auth0 redirect callback...');
                 await this.handleRedirectCallback();
             }
             
             return true;
         } catch (error) {
-            console.error('❌ Error initializing Auth0:', error);
+            console.error('❌ Error initializing standard Auth0:', error);
+            
+            // Provide specific debugging help
+            if (error.message?.includes('Invalid state')) {
+                console.error('🔄 Try clearing browser cache and localStorage');
+            } else if (error.message?.includes('Unauthorized') || error.message?.includes('access_denied')) {
+                console.error('🔒 Auth0 Configuration Issue:');
+                console.error('   1. Check your Auth0 application Grant Types');
+                console.error('   2. Ensure Authorization Code + Refresh Token are enabled');
+                console.error('   3. Verify callback URLs match exactly');
+                console.error('   4. Try removing audience configuration for basic auth');
+            } else if (error.message?.includes('audience')) {
+                console.error('🎯 Audience configuration issue - try leaving audience empty for basic auth');
+            }
+            
             return false;
         }
     },

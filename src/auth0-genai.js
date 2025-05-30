@@ -17,6 +17,14 @@ export const auth0GenAI = {
                 return false;
             }
             
+            console.log('🤖 Initializing Auth0 for GenAI with domain:', config.auth0.domain);
+            
+            // Check if this is a GenAI-enabled domain
+            if (!config.auth0.domain.includes('genai') && !config.auth0.domain.includes('.eu.auth0.com')) {
+                console.log('ℹ️ Domain does not appear to be GenAI-enabled, using standard Auth0');
+                return false;
+            }
+            
             // Initialize with enhanced configuration for GenAI
             this.client = await window.auth0.createAuth0Client({
                 domain: config.auth0.domain,
@@ -35,9 +43,29 @@ export const auth0GenAI = {
             this.isInitialized = true;
             console.log('✅ Auth0 for GenAI initialized successfully');
             
+            // Test the client to ensure GenAI features are available
+            try {
+                await this.testGenAICapabilities();
+            } catch (error) {
+                console.warn('⚠️ GenAI features not available, falling back to standard Auth0:', error.message);
+                this.isInitialized = false;
+                return false;
+            }
+            
+            // Check if already authenticated on page load
+            const isAuthenticated = await this.client.isAuthenticated();
+            if (isAuthenticated) {
+                console.log('👤 User already authenticated with Auth0 GenAI');
+                const user = await this.getEnhancedUser();
+                if (user) {
+                    window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
+                }
+            }
+            
             // Handle redirect callback
             if (window.location.search.includes('code=') || 
                 window.location.search.includes('error=')) {
+                console.log('🔄 Handling Auth0 GenAI redirect callback...');
                 await this.handleRedirectCallback();
             }
             
@@ -47,7 +75,103 @@ export const auth0GenAI = {
             return true;
         } catch (error) {
             console.error('❌ Error initializing Auth0 for GenAI:', error);
+            
+            // Provide helpful debugging information
+            if (error.message?.includes('Unauthorized')) {
+                console.error('🔒 GenAI features require enrollment in Developer Preview program');
+                console.error('📋 Visit https://auth0.com/ai/docs to join the program');
+            } else if (error.message?.includes('audience')) {
+                console.error('🎯 Invalid audience configuration for GenAI');
+            } else if (error.message?.includes('domain')) {
+                console.error('🌐 Domain configuration issue - ensure you have a GenAI-enabled tenant');
+            }
+            
             return false;
+        }
+    },
+    
+    // Test GenAI capabilities
+    async testGenAICapabilities() {
+        if (!this.client) {
+            throw new Error('Auth0 client not initialized');
+        }
+        
+        // Try to get token silently to test configuration
+        try {
+            await this.client.getTokenSilently({
+                authorizationParams: {
+                    audience: config.auth0.audience || `https://${config.auth0.domain}/api/v2/`,
+                }
+            });
+            console.log('🧪 GenAI capabilities test passed');
+        } catch (error) {
+            if (error.error === 'login_required' || error.error === 'consent_required') {
+                // This is expected when not logged in
+                console.log('🧪 GenAI capabilities available (login required)');
+                return;
+            }
+            throw new Error(`GenAI test failed: ${error.error || error.message}`);
+        }
+    },
+    
+    // Login with popup (required method)
+    async loginWithPopup() {
+        if (!this.isInitialized) {
+            console.error('❌ Auth0 for GenAI not initialized');
+            window.dispatchEvent(new CustomEvent('showNotification', {
+                detail: { message: 'Auth0 GenAI is not ready. Please refresh the page.', type: 'error' }
+            }));
+            return;
+        }
+        
+        try {
+            console.log('🤖 Starting Auth0 GenAI login...');
+            
+            await this.client.loginWithPopup({
+                authorizationParams: {
+                    scope: 'openid profile email offline_access read:current_user update:current_user_metadata'
+                }
+            });
+            
+            console.log('✅ Auth0 GenAI login successful');
+            
+            const user = await this.getEnhancedUser();
+            if (user) {
+                console.log('👤 Enhanced user profile retrieved:', user.name || user.email);
+                window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
+            }
+        } catch (error) {
+            console.error('❌ Error logging in with Auth0 GenAI:', error);
+            
+            // Handle specific error types
+            let errorMessage = 'Login failed. Please try again.';
+            if (error.error === 'popup_closed_by_user') {
+                errorMessage = 'Login was cancelled.';
+            } else if (error.error === 'access_denied') {
+                errorMessage = 'Access denied. Please check your permissions.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            window.dispatchEvent(new CustomEvent('showNotification', {
+                detail: { message: errorMessage, type: 'error' }
+            }));
+        }
+    },
+    
+    // Login with redirect
+    async login() {
+        if (!this.isInitialized) {
+            console.error('Auth0 GenAI not initialized');
+            return;
+        }
+        
+        try {
+            await this.client.loginWithRedirect({
+                appState: { returnTo: window.location.pathname }
+            });
+        } catch (error) {
+            console.error('Error logging in with Auth0 GenAI:', error);
         }
     },
     
@@ -343,18 +467,13 @@ export const auth0GenAI = {
             await this.client.handleRedirectCallback();
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Get user info after successful login
+            // Get enhanced user info after successful login
             const user = await this.getEnhancedUser();
             if (user) {
-                window.dispatchEvent(new CustomEvent('userAuthenticated', { 
-                    detail: { 
-                        user,
-                        isGenAIEnabled: true 
-                    } 
-                }));
+                window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
             }
         } catch (error) {
-            console.error('Error handling redirect callback:', error);
+            console.error('Error handling Auth0 GenAI redirect callback:', error);
         }
     }
 }; 
