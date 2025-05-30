@@ -124,6 +124,18 @@ export const swipe = {
         // Add event listeners
         this.setupCardListeners(card);
         
+        // Add click tracking for Luma links
+        const lumaLink = card.querySelector('.luma-link');
+        if (lumaLink) {
+            lumaLink.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Track the URL click
+                if (typeof webhook !== 'undefined') {
+                    webhook.trackEventUrlClick(event, 'card');
+                }
+            });
+        }
+        
         return card;
     },
     
@@ -270,17 +282,27 @@ export const swipe = {
         // Add swipe animation class
         card.classList.add(`swiped-${direction}`);
         
+        // Determine specific action type
+        let actionType = 'pass';
+        if (direction === 'right') {
+            actionType = 'like';
+        } else if (direction === 'up') {
+            actionType = 'super-like';
+        } else if (direction === 'left') {
+            actionType = 'pass';
+        }
+        
         // Handle the swipe action
         if (direction === 'right' || direction === 'up') {
             // Like or Super Like
             storage.addMatch(event);
-            webhook.trackMatch(event);
+            webhook.trackMatch(event, actionType);
             this.showMatchAnimation();
         }
         
-        // Mark event as seen and track it
+        // Mark event as seen and track it with specific action
         events.markEventSeen(eventId);
-        webhook.trackEventSeen(event);
+        webhook.trackEventSeen(event, actionType);
         
         // Remove card after animation
         setTimeout(() => {

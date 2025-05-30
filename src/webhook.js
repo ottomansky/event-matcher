@@ -254,25 +254,117 @@ export const webhook = {
     },
     
     // Track user match
-    trackMatch(event) {
+    trackMatch(event, actionType = 'like') {
+        // Log comprehensive data for debugging
+        this.logEventDataSummary(event, actionType);
+        
+        // Build complete event URL
+        const eventUrl = this.buildEventUrl(event);
+
         this.sendEvent('match_created', {
+            // Event identifiers
             eventId: event.api_id,
-            eventName: event.name,
-            eventType: event.location_type,
-            eventDate: event.start_at,
-            location: event.geo_address_info?.city_state,
-            url: event.url
+            eventSlug: event.event?.url,
+            eventUrl: eventUrl,
+            
+            // Event basic info
+            eventName: event.event?.name,
+            eventDescription: event.calendar?.description_short,
+            
+            // Event timing
+            eventDate: event.event?.start_at,
+            eventEndDate: event.event?.end_at,
+            duration: this.calculateEventDuration(event.event?.start_at, event.event?.end_at),
+            
+            // Event location & format
+            eventType: event.event?.location_type,
+            location: event.event?.geo_address_info?.city_state,
+            virtualInfo: event.event?.virtual_info,
+            
+            // Organizer info
+            organizerName: event.calendar?.name,
+            organizerAvatar: event.calendar?.avatar_url,
+            
+            // Event media
+            coverImage: event.event?.cover_url,
+            
+            // Interaction details
+            action: actionType, // 'like' or 'super-like'
+            matchScore: event.matchScore,
+            matchReasons: event.matchDetails,
+            
+            // Additional metadata
+            timestamp: new Date().toISOString(),
+            source: 'event-matcher-swipe'
         });
     },
     
     // Track event seen
-    trackEventSeen(event) {
+    trackEventSeen(event, action = 'swipe') {
+        // Log comprehensive data for debugging
+        this.logEventDataSummary(event, action);
+        
+        // Build complete event URL
+        const eventUrl = this.buildEventUrl(event);
+
         this.sendEvent('event_seen', {
+            // Event identifiers
             eventId: event.api_id,
-            eventName: event.name,
-            action: 'swipe',
-            eventType: event.location_type
+            eventSlug: event.event?.url,
+            eventUrl: eventUrl,
+            
+            // Event basic info
+            eventName: event.event?.name,
+            eventDescription: event.calendar?.description_short,
+            
+            // Event timing
+            eventDate: event.event?.start_at,
+            eventEndDate: event.event?.end_at,
+            duration: this.calculateEventDuration(event.event?.start_at, event.event?.end_at),
+            
+            // Event location & format
+            eventType: event.event?.location_type,
+            location: event.event?.geo_address_info?.city_state,
+            virtualInfo: event.event?.virtual_info,
+            
+            // Organizer info
+            organizerName: event.calendar?.name,
+            organizerAvatar: event.calendar?.avatar_url,
+            
+            // Event media
+            coverImage: event.event?.cover_url,
+            
+            // Interaction details
+            action: action,
+            matchScore: event.matchScore,
+            matchReasons: event.matchDetails,
+            
+            // Additional metadata
+            timestamp: new Date().toISOString(),
+            source: 'event-matcher-swipe'
         });
+    },
+    
+    // Calculate event duration helper
+    calculateEventDuration(startAt, endAt) {
+        if (!startAt || !endAt) return null;
+        
+        try {
+            const start = new Date(startAt);
+            const end = new Date(endAt);
+            const durationMs = end - start;
+            const hours = Math.floor(durationMs / (1000 * 60 * 60));
+            const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        } catch (error) {
+            console.warn('Error calculating event duration:', error);
+            return null;
+        }
     },
     
     // Track user preferences update
@@ -330,7 +422,84 @@ export const webhook = {
             hasPreferences: !!importData.preferences,
             timestamp: new Date().toISOString()
         });
-    }
+    },
+    
+    // Track event URL click
+    trackEventUrlClick(event, source = 'card') {
+        // Log comprehensive data for debugging
+        this.logEventDataSummary(event, 'url-click');
+        
+        // Build complete event URL
+        const eventUrl = this.buildEventUrl(event);
+
+        this.sendEvent('event_url_clicked', {
+            // Event identifiers
+            eventId: event.api_id,
+            eventSlug: event.event?.url,
+            eventUrl: eventUrl,
+            
+            // Event basic info
+            eventName: event.event?.name,
+            eventType: event.event?.location_type,
+            organizerName: event.calendar?.name,
+            
+            // Click details
+            clickSource: source, // 'card', 'matches-list', etc.
+            matchScore: event.matchScore,
+            
+            // Additional metadata
+            timestamp: new Date().toISOString(),
+            source: 'event-matcher-url-click'
+        });
+    },
+    
+    // Development helper: Log comprehensive event data summary
+    logEventDataSummary(event, actionType = 'unknown') {
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('🔍 Event Data Summary for Webhook:', {
+                eventIdentifiers: {
+                    eventId: event.api_id,
+                    eventSlug: event.event?.url,
+                    eventUrl: this.buildEventUrl(event)
+                },
+                eventBasicInfo: {
+                    name: event.event?.name,
+                    description: event.calendar?.description_short,
+                    organizer: event.calendar?.name
+                },
+                eventTiming: {
+                    startDate: event.event?.start_at,
+                    endDate: event.event?.end_at,
+                    duration: this.calculateEventDuration(event.event?.start_at, event.event?.end_at)
+                },
+                eventLocation: {
+                    type: event.event?.location_type,
+                    location: event.event?.geo_address_info?.city_state,
+                    virtualInfo: event.event?.virtual_info
+                },
+                eventMedia: {
+                    coverImage: event.event?.cover_url,
+                    organizerAvatar: event.calendar?.avatar_url
+                },
+                matchingData: {
+                    action: actionType,
+                    matchScore: event.matchScore,
+                    matchReasons: event.matchDetails
+                }
+            });
+        }
+    },
+
+    // Helper to build event URL
+    buildEventUrl(event) {
+        if (!event.event?.url) return null;
+        
+        if (event.event.url.startsWith('http')) {
+            return event.event.url;
+        } else {
+            return `https://lu.ma/${event.event.url}`;
+        }
+    },
 };
 
 // Cleanup on page unload

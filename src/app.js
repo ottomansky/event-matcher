@@ -377,7 +377,7 @@ const app = {
             return;
         }
         
-        matchesList.innerHTML = matches.map(match => {
+        matchesList.innerHTML = matches.map((match, index) => {
             // Construct the Luma event URL
             let eventUrl = '#';
             if (match.event.url) {
@@ -391,7 +391,10 @@ const app = {
             }
             
             return `
-            <div class="match-card group cursor-pointer" onclick="window.open('${eventUrl}', '_blank')">
+            <div class="match-card group cursor-pointer" 
+                 data-event-id="${match.event.api_id}" 
+                 data-event-url="${eventUrl}" 
+                 data-match-index="${index}">
                 <div class="relative overflow-hidden">
                     <img src="${match.event.cover_url || 'https://via.placeholder.com/400x300?text=No+Image'}" 
                          alt="${match.event.name}"
@@ -433,6 +436,27 @@ const app = {
             </div>
             `;
         }).join('');
+
+        // Add click event listeners for match cards
+        document.querySelectorAll('.match-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const eventId = e.currentTarget.dataset.eventId;
+                const eventUrl = e.currentTarget.dataset.eventUrl;
+                const matchIndex = parseInt(e.currentTarget.dataset.matchIndex);
+                
+                // Find the match event data
+                const match = matches[matchIndex];
+                if (match && typeof webhook !== 'undefined') {
+                    // Track the URL click
+                    webhook.trackEventUrlClick(match, 'matches-list');
+                }
+                
+                // Open the event URL
+                if (eventUrl && eventUrl !== '#') {
+                    window.open(eventUrl, '_blank');
+                }
+            });
+        });
     },
     
     // Format relative time
