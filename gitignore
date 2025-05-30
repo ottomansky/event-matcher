@@ -1,0 +1,43 @@
+# Environment and config files
+.env
+.env.local
+src/config.js
+config.js
+
+# API Keys and Tokens
+*.key
+*.token
+apify-config.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# User data (if stored locally)
+user-data/
+matches/
+
+# Node modules (if added later)
+node_modules/
+
+# Build output (if added later)
+dist/
+build/ 

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Matcher - Find Your Perfect Events</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Auth0 -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="../styles/main.css">
+    
+    <!-- Meta tags -->
+    <meta name="description" content="Find and match with events that suit your interests">
+    <meta name="theme-color" content="#6366f1">
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="app" class="min-h-screen">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-purple-600 to-indigo-700 z-50 flex items-center justify-center">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-20 w-20 border-4 border-white border-t-transparent mx-auto"></div>
+                <p class="mt-6 text-xl text-white font-semibold">Finding your perfect events...</p>
+            </div>
+        </div>
+        
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="hidden">
+            <div class="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-purple-600 to-indigo-700">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <div class="mb-6">
+                            <i class="fas fa-calendar-star text-6xl text-white"></i>
+                        </div>
+                        <h1 class="text-5xl font-black text-white mb-3">Event Matcher</h1>
+                        <p class="text-xl text-purple-100">Swipe your way to amazing events</p>
+                    </div>
+                    
+                    <div class="bg-white/95 backdrop-blur-lg p-10 rounded-3xl shadow-2xl space-y-6">
+                        <h2 class="text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Welcome!</h2>
+                        
+                        <p class="text-center text-gray-600">
+                            Discover events tailored to your interests with our smart matching algorithm
+                        </p>
+                        
+                        <button id="auth0-login-btn" class="auth0-login-btn w-full justify-center">
+                            <i class="fas fa-shield-halved"></i>
+                            Sign in with Auth0
+                        </button>
+                        
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-200"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-3 bg-white text-gray-500">or</span>
+                            </div>
+                        </div>
+                        
+                        <button id="guest-btn" class="btn-secondary w-full py-3 px-4 rounded-full font-semibold flex items-center justify-center gap-2">
+                            <i class="fas fa-user"></i>
+                            Continue as Guest
+                        </button>
+                        
+                        <p class="text-xs text-center text-gray-500 mt-4">
+                            By continuing, you agree to our terms and privacy policy
+                        </p>
+                    </div>
+                    
+                    <p class="text-center text-white/80 text-sm">
+                        Need help? Check out <a href="../AUTH0_SETUP.md" class="underline">Auth0 Setup Guide</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Preferences Screen -->
+        <div id="preferences-screen" class="hidden">
+            <div class="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 to-indigo-50">
+                <header class="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-10">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center">
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                            Tell us about yourself
+                        </h1>
+                        <button id="skip-preferences" class="text-gray-500 hover:text-gray-700 font-medium">
+                            Skip for now →
+                        </button>
+                    </div>
+                </header>
+                
+                <main class="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
+                    <div class="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl p-8">
+                        <form id="preferences-form" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                                <input type="text" id="user-name" 
+                                    class="form-input w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+                                    placeholder="Your name">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Occupation</label>
+                                <select id="occupation" 
+                                    class="form-input w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="">Select your occupation</option>
+                                    <option value="student">Student</option>
+                                    <option value="developer">Software Developer</option>
+                                    <option value="designer">Designer</option>
+                                    <option value="pm">Product Manager</option>
+                                    <option value="entrepreneur">Entrepreneur</option>
+                                    <option value="marketing">Marketing Professional</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">Interests (select all that apply)</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="tech" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Technology & Innovation</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="business" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Business & Entrepreneurship</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="arts" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Arts & Culture</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="networking" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Networking & Social</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="education" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Education & Learning</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="checkbox" name="interests" value="health" class="mr-3 text-purple-600 focus:ring-purple-500 rounded">
+                                        <span class="font-medium">Health & Wellness</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">Preferred Event Format</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="radio" name="format" value="in-person" class="mr-3 text-purple-600 focus:ring-purple-500">
+                                        <span class="font-medium">In-person only</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="radio" name="format" value="virtual" class="mr-3 text-purple-600 focus:ring-purple-500">
+                                        <span class="font-medium">Virtual only</span>
+                                    </label>
+                                    <label class="flex items-center p-3 rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer">
+                                        <input type="radio" name="format" value="both" class="mr-3 text-purple-600 focus:ring-purple-500" checked>
+                                        <span class="font-medium">Both in-person and virtual</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Location (for in-person events)</label>
+                                <input type="text" id="location" 
+                                    class="form-input w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+                                    placeholder="City, State">
+                            </div>
+                            
+                            <button type="submit" class="btn-primary w-full py-4 px-6 rounded-full font-semibold text-lg">
+                                Save Preferences & Start Matching
+                            </button>
+                        </form>
+                    </div>
+                </main>
+            </div>
+        </div>
+        
+        <!-- Main App Screen (Swipe Interface) -->
+        <div id="main-screen" class="hidden">
+            <div class="min-h-screen flex flex-col">
+                <header class="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-10">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            <img id="user-avatar" src="" alt="User" class="w-12 h-12 rounded-full border-2 border-purple-400 hidden">
+                            <div>
+                                <span id="user-display-name" class="font-bold text-lg"></span>
+                                <p class="text-sm text-gray-500">Happy swiping! 🎉</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <button id="matches-btn" class="relative text-gray-600 hover:text-purple-600 transition-colors">
+                                <i class="fas fa-heart text-xl"></i>
+                                <span id="match-count" class="absolute -top-2 -right-2 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold hidden">0</span>
+                            </button>
+                            <button id="settings-btn" class="text-gray-600 hover:text-purple-600 transition-colors">
+                                <i class="fas fa-cog text-xl"></i>
+                            </button>
+                            <button id="logout-btn" class="text-gray-600 hover:text-purple-600 transition-colors">
+                                <i class="fas fa-sign-out-alt text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+                
+                <main class="flex-1 relative overflow-hidden bg-gradient-to-br from-purple-50 to-indigo-50">
+                    <div id="swipe-container" class="absolute inset-0 flex items-center justify-center p-4">
+                        <div id="no-more-events" class="hidden text-center">
+                            <i class="fas fa-calendar-times text-8xl text-purple-300 mb-6"></i>
+                            <h3 class="text-2xl font-bold text-gray-700 mb-3">No more events!</h3>
+                            <p class="text-gray-500 mb-6">Check back later for more amazing events</p>
+                            <button onclick="location.reload()" class="btn-primary px-6 py-3 rounded-full">
+                                <i class="fas fa-redo mr-2"></i> Refresh
+                            </button>
+                        </div>
+                        
+                        <div id="card-stack" class="relative w-full max-w-md h-[650px]">
+                            <!-- Event cards will be dynamically inserted here -->
+                        </div>
+                        
+                        <!-- Swipe tip -->
+                        <div id="swipe-tip" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg opacity-90">
+                            <i class="fas fa-hand-pointer mr-2"></i>
+                            Swipe or drag cards easily with mouse or touchpad!
+                        </div>
+                    </div>
+                    
+                    <!-- Action buttons -->
+                    <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-6">
+                        <button id="pass-btn" class="w-16 h-16 bg-white rounded-full shadow-xl flex items-center justify-center text-red-500 hover:scale-110 transition-all group">
+                            <i class="fas fa-times text-2xl group-hover:scale-110 transition-transform"></i>
+                        </button>
+                        <button id="superlike-btn" class="w-14 h-14 bg-white rounded-full shadow-xl flex items-center justify-center text-blue-500 hover:scale-110 transition-all group">
+                            <i class="fas fa-star text-xl group-hover:scale-110 transition-transform"></i>
+                        </button>
+                        <button id="like-btn" class="w-16 h-16 bg-white rounded-full shadow-xl flex items-center justify-center text-green-500 hover:scale-110 transition-all group">
+                            <i class="fas fa-heart text-2xl group-hover:scale-110 transition-transform"></i>
+                        </button>
+                    </div>
+                </main>
+            </div>
+        </div>
+        
+        <!-- Matches Screen -->
+        <div id="matches-screen" class="hidden">
+            <div class="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 to-indigo-50">
+                <header class="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-10">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center">
+                        <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                            Your Matches
+                        </h1>
+                        <button id="back-to-swipe" class="btn-secondary px-4 py-2 rounded-full font-medium">
+                            <i class="fas fa-arrow-left mr-2"></i> Back to Swiping
+                        </button>
+                    </div>
+                </header>
+                
+                <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+                    <div id="matches-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Matched events will be displayed here -->
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script type="module" src="../src/config.js"></script>
+    <script type="module" src="../src/storage.js"></script>
+    <script type="module" src="../src/auth0.js"></script>
+    <script type="module" src="../src/auth0-genai.js"></script>
+    <script type="module" src="../src/auth.js"></script>
+    <script type="module" src="../src/events.js"></script>
+    <script type="module" src="../src/swipe.js"></script>
+    <script type="module" src="../src/ai-recommendations.js"></script>
+    <script type="module" src="../src/webhook.js"></script>
+    <script type="module" src="../src/app.js"></script>
+</body>
+</html> 
