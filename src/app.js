@@ -135,6 +135,11 @@ const app = {
             this.showAuthScreen();
         });
         
+        // Notification handler
+        window.addEventListener('showNotification', (e) => {
+            this.showNotification(e.detail.message, e.detail.type);
+        });
+        
         // Auth0 login button
         document.getElementById('auth0-login-btn')?.addEventListener('click', () => {
             auth.signInWithAuth0();

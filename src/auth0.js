@@ -12,32 +12,47 @@ export const auth0 = {
             // Only initialize Auth0 if credentials are configured
             if (config.auth0.domain === 'YOUR_AUTH0_DOMAIN' || 
                 config.auth0.clientId === 'YOUR_AUTH0_CLIENT_ID') {
-                console.log('Auth0 not configured. Use AUTH0_SETUP.md for instructions.');
+                console.log('⚠️ Auth0 not configured. Use config.example.js to set up your credentials.');
                 return false;
             }
+            
+            console.log('🔐 Initializing Auth0 with domain:', config.auth0.domain);
             
             this.client = await window.auth0.createAuth0Client({
                 domain: config.auth0.domain,
                 clientId: config.auth0.clientId,
                 authorizationParams: {
                     redirect_uri: config.auth0.redirectUri,
-                    audience: config.auth0.audience || undefined
+                    audience: config.auth0.audience || undefined,
+                    scope: 'openid profile email'
                 },
                 cacheLocation: 'localstorage',
                 useRefreshTokens: true
             });
             
             this.isInitialized = true;
+            console.log('✅ Auth0 client initialized successfully');
+            
+            // Check if already authenticated on page load
+            const isAuthenticated = await this.client.isAuthenticated();
+            if (isAuthenticated) {
+                console.log('👤 User already authenticated');
+                const user = await this.getUser();
+                if (user) {
+                    window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
+                }
+            }
             
             // Handle redirect callback
             if (window.location.search.includes('code=') || 
                 window.location.search.includes('error=')) {
+                console.log('🔄 Handling Auth0 redirect callback...');
                 await this.handleRedirectCallback();
             }
             
             return true;
         } catch (error) {
-            console.error('Error initializing Auth0:', error);
+            console.error('❌ Error initializing Auth0:', error);
             return false;
         }
     },
@@ -77,18 +92,45 @@ export const auth0 = {
     // Login with popup
     async loginWithPopup() {
         if (!this.isInitialized) {
-            console.error('Auth0 not initialized');
+            console.error('❌ Auth0 not initialized');
+            window.dispatchEvent(new CustomEvent('showNotification', {
+                detail: { message: 'Auth0 is not ready. Please refresh the page.', type: 'error' }
+            }));
             return;
         }
         
         try {
-            await this.client.loginWithPopup();
+            console.log('🔐 Starting Auth0 login...');
+            
+            await this.client.loginWithPopup({
+                authorizationParams: {
+                    scope: 'openid profile email'
+                }
+            });
+            
+            console.log('✅ Auth0 login successful');
+            
             const user = await this.getUser();
             if (user) {
+                console.log('👤 User profile retrieved:', user.name || user.email);
                 window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: user }));
             }
         } catch (error) {
-            console.error('Error logging in with popup:', error);
+            console.error('❌ Error logging in with Auth0:', error);
+            
+            // Handle specific error types
+            let errorMessage = 'Login failed. Please try again.';
+            if (error.error === 'popup_closed_by_user') {
+                errorMessage = 'Login was cancelled.';
+            } else if (error.error === 'access_denied') {
+                errorMessage = 'Access denied. Please check your permissions.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            window.dispatchEvent(new CustomEvent('showNotification', {
+                detail: { message: errorMessage, type: 'error' }
+            }));
         }
     },
     
